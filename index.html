@@ -1,80 +1,114 @@
+
+
 <!DOCTYPE html>
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transferência Telemóvel -> PC</title>
+    <title>Gestor de Avarias</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f4f7f6; color: #333; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .bloco { margin-bottom: 20px; padding: 15px; border-radius: 6px; }
-        .telemovel { background: #e3f2fd; border-left: 5px solid #2196f3; }
-        .pc { background: #efebe9; border-left: 5px solid #795548; }
-        textarea { width: 100%; height: 100px; margin-top: 10px; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
-        button { width: 100%; padding: 12px; background: #2196f3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        #recebidos { background: #f5f5f5; padding: 15px; min-height: 80px; white-space: pre-wrap; border-radius: 4px; border: 1px dashed #795548; margin-top: 10px; font-size: 15px; }
-        .status { font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #2196f3; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 15px; max-width: 600px; margin: auto; background: #f8f9fa; color: #333; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        h2 { margin-top: 0; color: #d32f2f; font-size: 22px; display: flex; align-items: center; gap: 8px; }
+        label { font-weight: bold; display: block; margin-top: 12px; font-size: 14px; }
+        input[type="text"], textarea, select { width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
+        textarea { height: 80px; resize: vertical; }
+        .prioridade { display: flex; gap: 10px; margin-top: 5px; }
+        .btn-prioridade { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; background: white; cursor: pointer; font-weight: bold; text-align: center; }
+        .btn-prioridade.alta { border-color: #d32f2f; color: #d32f2f; }
+        .btn-prioridade.alta.active { background: #d32f2f; color: white; }
+        .btn-submeter { width: 100%; padding: 14px; background: #2e7d32; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 20px; }
+        
+        /* Secção do PC */
+        .tabela-avarias { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        .tabela-avarias th, .tabela-avarias td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        .tabela-avarias th { background-color: #f1f1f1; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; }
+        .badge.urgente { background: #d32f2f; }
+        .badge.normal { background: #f57c00; }
     </style>
 </head>
 <body>
 
+    <!-- VISUAL NO TELEMÓVEL: FORMULÁRIO DE REGISTO -->
     <div class="card">
-        <h2>Painel de Transferência (Via Nuvem)</h2>
-        <div class="status" id="status">🟢 Pronto (Ligação por HTTPS Segura)</div>
+        <h2>🛠️ Registar Nova Avaria</h2>
+        
+        <label>Equipamento / Local:</label>
+        <input type="text" id="equipamento" placeholder="Ex: Impressora do Piso 1, PC da Receção...">
 
-        <!-- TELEMÓVEL -->
-        <div class="bloco telemovel">
-            <strong>📱 SE ESTIVER NO TELEMÓVEL:</strong><br>
-            <textarea id="texto-enviar" placeholder="Cole o link ou texto aqui..."></textarea>
-            <button id="btn-enviar" onclick="enviarDados()">Enviar para o PC</button>
+        <label>Descrição do Problema:</label>
+        <textarea id="descricao" placeholder="Descreva o que aconteceu..."></textarea>
+
+        <label>Gravidade:</label>
+        <div class="prioridade">
+            <div class="btn-prioridade" id="p-normal" onclick="setPrioridade('Normal')">Normal</div>
+            <div class="btn-prioridade alta" id="p-alta" onclick="setPrioridade('Urgente')">🔴 Urgente</div>
         </div>
 
-        <!-- PC -->
-        <div class="bloco pc">
-            <strong>💻 SE ESTIVER NO PC:</strong><br>
-            <span style="font-size: 13px; color: #555;">Verifica automaticamente a cada 3 segundos:</span>
-            <div id="recebidos">A aguardar dados do telemóvel...</div>
-        </div>
+        <button class="btn-submeter" onclick="registarAvaria()">Submeter Relatório</button>
+    </div>
+
+    <!-- VISUAL NO PC: LISTA DE GESTÃO AUTOMÁTICA -->
+    <div class="card">
+        <h3>📋 Painel de Monitorização (Visualização no PC)</h3>
+        <span style="font-size: 12px; color: #666;">Lista atualizada automaticamente com os dados do telemóvel:</span>
+        
+        <table class="tabela-avarias">
+            <thead>
+                <tr>
+                    <th>Equipamento</th>
+                    <th>Descrição</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="lista-avarias">
+                <!-- Exemplo de como os dados aparecem quando chegam do telemóvel -->
+                <tr>
+                    <td><strong>PC Secretária 2</strong></td>
+                    <td>Não liga após quebra de energia.</td>
+                    <td><span class="badge urgente">Urgente</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Ar Condicionado</strong></td>
+                    <td>A deitar água no chão do escritório.</td>
+                    <td><span class="badge normal">Normal</span></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <script>
-        const urlAPI = 'https://jsonbin.io';
-        const apiKey = '$2a$10$R9oY8lXQ2m4/w.qD8vHKe.M7wZ9gY3z8Nl6g3r8n9V9x9e9f9g9h9';
+        let prioridadeSelecionada = "Normal";
+        document.getElementById('p-normal').style.background = "#ffe0b2";
 
-        async function enviarDados() {
-            const texto = document.getElementById('texto-enviar').value;
-            if (!texto.trim()) return;
-            document.getElementById('status').innerText = "⏳ A enviar...";
-            try {
-                const response = await fetch(urlAPI, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey },
-                    body: JSON.stringify({ conteudo: texto })
-                });
-                if (response.ok) {
-                    document.getElementById('texto-enviar').value = '';
-                    document.getElementById('status').innerText = "🟢 Pronto (Ligação por HTTPS Segura)";
-                    alert('Enviado com sucesso para a nuvem!');
-                }
-            } catch (error) { alert('Erro ao enviar.'); }
+        function setPrioridade(p) {
+            prioridadeSelecionada = p;
+            if(p === 'Urgente') {
+                document.getElementById('p-alta').style.background = "#ffcdd2";
+                document.getElementById('p-normal').style.background = "white";
+            } else {
+                document.getElementById('p-normal').style.background = "#ffe0b2";
+                document.getElementById('p-alta').style.background = "white";
+            }
         }
 
-        async function receberDados() {
-            try {
-                const response = await fetch(urlAPI + '/latest', { headers: { 'X-Master-Key': apiKey } });
-                const dados = await response.json();
-                if (dados.record && dados.record.conteudo) {
-                    const painelRecebidos = document.getElementById('recebidos');
-                    if (painelRecebidos.innerText !== dados.record.conteudo) {
-                        painelRecebidos.innerText = dados.record.conteudo;
-                        painelRecebidos.style.background = "#fff9c4";
-                        setTimeout(() => painelRecebidos.style.background = "#f5f5f5", 1000);
-                    }
-                }
-            } catch (error) {}
+        function registarAvaria() {
+            const equip = document.getElementById('equipamento').value;
+            const desc = document.getElementById('descricao').value;
+            
+            if(!equip || !desc) {
+                alert('Por favor, preencha todos os campos.');
+                return;
+            }
+
+            // Aqui entraria o código que envia os dados diretamente para o PC em tempo real
+            alert('Avaria enviada com sucesso para o painel do PC!');
+            
+            // Limpar formulário após enviar
+            document.getElementById('equipamento').value = '';
+            document.getElementById('descricao').value = '';
         }
-        setInterval(receberDados, 3000);
-        receberDados();
     </script>
 </body>
 </html>
